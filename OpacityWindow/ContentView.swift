@@ -101,6 +101,18 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .toggleLock)) { _ in
             isLocked.toggle()
         }
+        .onAppear {
+            // Cold launch: the file was handed over before this view existed.
+            if let url = OpenImageRequest.shared.take() {
+                loadImage(from: url)
+            }
+        }
+        .onReceive(OpenImageRequest.shared.$url.compactMap { $0 }) { _ in
+            // Already running: Finder handed us another file.
+            if let url = OpenImageRequest.shared.take() {
+                loadImage(from: url)
+            }
+        }
     }
     
     private func openImagePicker() {
