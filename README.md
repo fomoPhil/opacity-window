@@ -5,7 +5,8 @@ A macOS reference image viewer with adjustable window opacity for artists and de
 ## Features
 
 - **Adjustable Window Opacity**: Control the entire window's transparency from 5% to 100%
-- **Image Loading**: Drag and drop images or use File → Open (⌘O)
+- **Image Loading**: Drag and drop, File → Open (⌘O), or open from Finder (right-click → Open With, drop on the Dock icon, or `open -a OpacityWindow image.png`)
+- **Always on Top / Lock**: Pin the window above other apps, and lock it to click through to whatever is behind (⌘L)
 - **Zoom & Pan**: Pinch to zoom, drag to pan, double-click to reset
 - **Smart Controls**: Controls become fully visible on hover for easy access
 - **Minimal UI**: Clean, unobtrusive interface that stays out of your way
@@ -41,7 +42,11 @@ A macOS reference image viewer with adjustable window opacity for artists and de
 | Action | Shortcut |
 |--------|----------|
 | Open Image | ⌘O |
+| Toggle Lock | ⌘L |
 | Quit | ⌘Q |
+
+OpacityWindow registers as an *alternate* handler for images, so it appears in
+Finder's Open With menu without displacing Preview as the default.
 
 ## Architecture
 
@@ -57,6 +62,7 @@ OpacityWindow/
 ├── ContentView.swift         # Main UI with controls overlay
 ├── ImageView.swift           # Image display with zoom/pan gestures
 ├── WindowAccessor.swift      # NSWindow bridge for opacity control
+├── UnlockButtonWindow.swift  # Floating unlock affordance while locked
 ├── Assets.xcassets/          # App icons and colors
 ├── Info.plist                # App configuration
 └── OpacityWindow.entitlements # App sandbox permissions
