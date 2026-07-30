@@ -6,13 +6,13 @@ A macOS reference-image viewer whose whole window can be made semi-transparent, 
 you can trace or eyeball a reference over whatever app is behind it. SwiftUI, single
 target, no dependencies.
 
-## Current state: working, clean, merged to main
+## Current state: working, clean, pushed
 
 | | |
 |---|---|
 | Repo | `github.com/fomoPhil/opacity-window` (**public**) |
-| Local | `~/Projects/opacity-window` |
-| HEAD | `main`, Swift 6 migration merged. **Not pushed to origin yet.** |
+| Local | `~/Projects/opacity-window`, in sync with `origin/main` |
+| HEAD | `ade55d5` "Migrate to Swift 6 language mode and drop GCD" (plus this doc line) |
 | Working tree | clean |
 | Build | **BUILD SUCCEEDED**, 0 errors, **0 warnings**, 0 deprecations (Debug and Release) |
 | Verified on | Xcode 26.3, Swift 6.2.4, macOS 26.3, Apple Silicon |
