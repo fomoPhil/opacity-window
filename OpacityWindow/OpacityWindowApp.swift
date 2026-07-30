@@ -32,6 +32,7 @@ struct OpacityWindowApp: App {
 /// This is held rather than posted as a one-shot notification because on a cold
 /// launch the URL arrives before ContentView exists to observe it. ContentView
 /// reads any pending value in .onAppear and observes this for later opens.
+@MainActor
 final class OpenImageRequest: ObservableObject {
     static let shared = OpenImageRequest()
     @Published var url: URL?
@@ -43,7 +44,7 @@ final class OpenImageRequest: ObservableObject {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
         // This app shows one image at a time, so honour the first and ignore the rest.
         guard let url = urls.first else { return }

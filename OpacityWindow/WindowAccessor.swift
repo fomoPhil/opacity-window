@@ -8,41 +8,36 @@ struct WindowAccessor: NSViewRepresentable {
     
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                window.isOpaque = false
-                window.backgroundColor = .clear
-                window.level = isAlwaysOnTop ? .floating : .normal
-                window.ignoresMouseEvents = isLocked
-                
-                // Show/hide unlock button window based on lock state
-                if isLocked {
-                    UnlockButtonWindowController.shared.show(relativeTo: window) {
-                        NotificationCenter.default.post(name: .toggleLock, object: nil)
-                    }
-                } else {
-                    UnlockButtonWindowController.shared.hide()
-                }
-            }
+        // The view has no window yet at this point, so reading it is deferred a turn.
+        // This Task inherits MainActor isolation from NSViewRepresentable.
+        Task {
+            view.window?.isOpaque = false
+            view.window?.backgroundColor = .clear
+            apply(to: view.window)
         }
         return view
     }
-    
+
     func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let window = nsView.window {
-                window.level = isAlwaysOnTop ? .floating : .normal
-                window.ignoresMouseEvents = isLocked
-                
-                // Show/hide unlock button window based on lock state
-                if isLocked {
-                    UnlockButtonWindowController.shared.show(relativeTo: window) {
-                        NotificationCenter.default.post(name: .toggleLock, object: nil)
-                    }
-                } else {
-                    UnlockButtonWindowController.shared.hide()
-                }
+        Task {
+            apply(to: nsView.window)
+        }
+    }
+
+    @MainActor
+    private func apply(to window: NSWindow?) {
+        guard let window else { return }
+
+        window.level = isAlwaysOnTop ? .floating : .normal
+        window.ignoresMouseEvents = isLocked
+
+        // Show/hide unlock button window based on lock state
+        if isLocked {
+            UnlockButtonWindowController.shared.show(relativeTo: window) {
+                NotificationCenter.default.post(name: .toggleLock, object: nil)
             }
+        } else {
+            UnlockButtonWindowController.shared.hide()
         }
     }
 }

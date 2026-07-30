@@ -129,11 +129,15 @@ struct ContentView: View {
     
     private func loadImage(from url: URL) {
         if let image = NSImage(contentsOf: url) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                loadedImage = image
-                zoomScale = 1.0
-                offset = .zero
-            }
+            display(image)
+        }
+    }
+
+    private func display(_ image: NSImage) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            loadedImage = image
+            zoomScale = 1.0
+            offset = .zero
         }
     }
     
@@ -149,33 +153,44 @@ struct ContentView: View {
         guard let provider = providers.first else { return false }
         
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, error in
-                if let data = data, let image = NSImage(data: data) {
-                    DispatchQueue.main.async {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            loadedImage = image
-                            zoomScale = 1.0
-                            offset = .zero
-                        }
-                    }
+            Task {
+                if let data = try? await provider.data(forTypeIdentifier: UTType.image.identifier),
+                   let image = NSImage(data: data) {
+                    display(image)
                 }
             }
             return true
         }
-        
+
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, error in
-                if let data = item as? Data,
+            Task {
+                // A fileURL item's data representation is the URL's own bytes. Loading it
+                // as Data rather than via loadItem keeps this on Sendable types.
+                if let data = try? await provider.data(forTypeIdentifier: UTType.fileURL.identifier),
                    let url = URL(dataRepresentation: data, relativeTo: nil) {
-                    DispatchQueue.main.async {
-                        loadImage(from: url)
-                    }
+                    loadImage(from: url)
                 }
             }
             return true
         }
-        
+
         return false
+    }
+}
+
+private extension NSItemProvider {
+    /// `loadDataRepresentation` returns a `Progress` handle, so Swift generates no
+    /// async bridge for it. This wraps the completion-handler form instead.
+    func data(forTypeIdentifier identifier: String) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            _ = loadDataRepresentation(forTypeIdentifier: identifier) { data, error in
+                if let data {
+                    continuation.resume(returning: data)
+                } else {
+                    continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
+                }
+            }
+        }
     }
 }
 

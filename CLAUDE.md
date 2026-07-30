@@ -1,7 +1,7 @@
 # OpacityWindow
 
 macOS reference-image viewer with adjustable window transparency. SwiftUI, one target,
-no dependencies. **Read `handoff.md` first** — it holds current state, architecture,
+no dependencies. **Read `handoff.md` first**. It holds current state, architecture,
 known quirks, and the deliberately-deferred work.
 
 ## Orientation
@@ -9,7 +9,8 @@ known quirks, and the deliberately-deferred work.
 - Repo: `github.com/fomoPhil/opacity-window` (public). Local is the same directory.
 - One scheme: `OpacityWindow`. **No test target.**
 - Build: `xcodebuild -project OpacityWindow.xcodeproj -scheme OpacityWindow -configuration Debug -destination 'platform=macOS' build`
-- Target macOS 14.0; `SWIFT_VERSION = 5.0` (Swift 5 language mode, not 6).
+- Target macOS 14.0; `SWIFT_VERSION = 6.0` (**Swift 6 language mode**, full strict
+  concurrency). New code must be concurrency-clean, not just warning-free.
 
 ## Project-specific rules
 
@@ -38,3 +39,11 @@ Building is not evidence. Launch it and confirm behaviour:
   at `slider 1 of scroll area 1 of group 1 of window 1`.
 - Image loading has three paths worth checking independently: drag-and-drop, ⌘O panel,
   and `open -a OpacityWindow <image>` (cold launch and already-running differ).
+- **The app opens several windows**, so `window 1` in AppleScript is a coin flip. Worse,
+  once the window is locked the **unlock panel becomes AX `window 1`**, so a naive
+  `set position of window 1` silently moves the little panel instead of the window and
+  the test proves nothing. Pick the window by size, not index. Reduce to a single
+  window first (⌘W the extras) whenever the check depends on which window responded.
+- Drag-and-drop cannot be driven by synthetic events. Exercise `handleDrop`'s two
+  branches directly against a real `NSItemProvider` in a small standalone binary
+  instead.

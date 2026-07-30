@@ -3,9 +3,9 @@ import AppKit
 
 /// A small floating panel that contains the unlock button
 /// This window remains clickable even when the main window ignores mouse events
-class UnlockButtonWindow: NSPanel {
+final class UnlockButtonWindow: NSPanel {
     private var hostingView: NSHostingView<UnlockButtonView>?
-    private var onUnlock: () -> Void = {}
+    private var onUnlock: @MainActor () -> Void = {}
     
     init() {
         super.init(
@@ -36,7 +36,7 @@ class UnlockButtonWindow: NSPanel {
         self.hostingView = hostingView
     }
     
-    func setUnlockAction(_ action: @escaping () -> Void) {
+    func setUnlockAction(_ action: @escaping @MainActor () -> Void) {
         self.onUnlock = action
         setupContent() // Refresh with new action
     }
@@ -81,57 +81,53 @@ struct UnlockButtonView: View {
 }
 
 /// Manages the unlock button window lifecycle
-class UnlockButtonWindowController {
+@MainActor
+final class UnlockButtonWindowController {
     static let shared = UnlockButtonWindowController()
-    
+
     private var unlockWindow: UnlockButtonWindow?
-    private var windowObserver: Any?
+    private var windowObservers: [any NSObjectProtocol] = []
     private var mainWindow: NSWindow?
-    
+
     private init() {}
-    
-    func show(relativeTo window: NSWindow, onUnlock: @escaping () -> Void) {
+
+    func show(relativeTo window: NSWindow, onUnlock: @escaping @MainActor () -> Void) {
         if unlockWindow == nil {
             unlockWindow = UnlockButtonWindow()
         }
-        
+
         unlockWindow?.setUnlockAction(onUnlock)
         unlockWindow?.positionRelativeTo(window: window)
         unlockWindow?.orderFront(nil)
-        
+
         mainWindow = window
-        
-        // Observe main window position changes
-        windowObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.didMoveNotification,
-            object: window,
-            queue: .main
-        ) { [weak self] _ in
-            self?.updatePosition()
-        }
-        
-        // Also observe resize
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didResizeNotification,
-            object: window,
-            queue: .main
-        ) { [weak self] _ in
-            self?.updatePosition()
+
+        // Track the window so the button rides along with it. Both tokens are kept:
+        // an earlier version dropped the resize token on the floor, so it was never
+        // removed and stacked up a duplicate observer on every show().
+        windowObservers = [NSWindow.didMoveNotification, NSWindow.didResizeNotification].map { name in
+            NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                // Safe: `queue: .main` guarantees this block is delivered on the main
+                // thread, which is where MainActor work belongs.
+                MainActor.assumeIsolated {
+                    self?.updatePosition()
+                }
+            }
         }
     }
-    
+
     func hide() {
         unlockWindow?.orderOut(nil)
-        
-        if let observer = windowObserver {
+
+        for observer in windowObservers {
             NotificationCenter.default.removeObserver(observer)
-            windowObserver = nil
         }
+        windowObservers.removeAll()
         mainWindow = nil
     }
-    
+
     private func updatePosition() {
-        guard let mainWindow = mainWindow else { return }
+        guard let mainWindow else { return }
         unlockWindow?.positionRelativeTo(window: mainWindow)
     }
 }
