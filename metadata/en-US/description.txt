@@ -1,0 +1,20 @@
+Keep a reference image floating over whatever you are working in, and fade it until you can see straight through it.
+
+OpacityWindow holds one picture in a window that stays above your other apps. Slide the opacity down and the image becomes a ghost you can draw underneath, line up against, or check your work by eye. Lock the window and your clicks pass straight through it, so you can keep painting in Procreate, Photoshop, Figma or anything else while the reference sits exactly where you left it.
+
+WHAT IT IS FOR
+
+- Tracing and studying artwork without a lightbox
+- Checking a build against the design mockup, pixel by pixel
+- Copying a pose, a colour or a composition while you work
+- Holding any picture on screen that you need to keep glancing at
+
+HOW IT WORKS
+
+- Drag an image in, or open one with Command O
+- Slide to fade the image anywhere from solid to almost invisible
+- Lock it so your clicks pass through to the app underneath
+- Zoom, pan, and double click to snap back
+- It floats above your other apps, so it never disappears behind your work
+
+It does one thing. There is no library to manage, no account, no subscription and nothing to learn. Open a picture, fade it, work underneath it.
