@@ -33,6 +33,58 @@ merely redundant.
 **Keep `LSHandlerRank = Alternate`** in Info.plist. This app must never become the
 system default image handler ahead of Preview.
 
+## Distribution (Developer ID, outside the App Store)
+
+Signed and notarised under the **Personal Team**, not Meora Studios. Confirm this
+before any signing, certificate or notarisation work.
+
+| | |
+|---|---|
+| Team | `AXW4GKUTKZ` ("PHILIP JAMES WOOLLEY") |
+| Certificate | Developer ID Application, expires **1 Feb 2027** |
+| Bundle id | `com.opacitywindow.app` |
+| `asc` profile | `Samplomatic`. Run `asc auth status` and confirm it is the default *before* submitting, or the notarisation key will not match the signing certificate. |
+| Export config | `ExportOptions.plist` in the repo root |
+
+Meora Studios has **no** Developer ID Application certificate, and the App Store
+Connect API cannot create one. Switching teams means creating that certificate by hand
+at developer.apple.com first.
+
+Release recipe:
+
+```bash
+xcodebuild archive -project OpacityWindow.xcodeproj -scheme OpacityWindow \
+  -configuration Release -archivePath /tmp/OpacityWindow.xcarchive \
+  -destination 'generic/platform=macOS'
+xcodebuild -exportArchive -archivePath /tmp/OpacityWindow.xcarchive \
+  -exportPath /tmp/ow-export -exportOptionsPlist ExportOptions.plist
+# app: notarise, then staple
+ditto -c -k --keepParent /tmp/ow-export/OpacityWindow.app /tmp/ow-export/OpacityWindow.zip
+asc notarization submit --file /tmp/ow-export/OpacityWindow.zip --wait
+xcrun stapler staple /tmp/ow-export/OpacityWindow.app
+# dmg: build from the stapled app, then sign BEFORE notarising
+hdiutil create -volname OpacityWindow -srcfolder <stage> -ov -format UDZO /tmp/OpacityWindow-1.0.dmg
+codesign --force --sign "Developer ID Application: PHILIP JAMES WOOLLEY (AXW4GKUTKZ)" \
+  --timestamp /tmp/OpacityWindow-1.0.dmg
+asc notarization submit --file /tmp/OpacityWindow-1.0.dmg --wait
+xcrun stapler staple /tmp/OpacityWindow-1.0.dmg
+```
+
+Two things that will bite:
+
+- **Sign the DMG before notarising it, never after stapling.** Signing invalidates an
+  existing ticket. An unsigned DMG notarises fine but `spctl` reports
+  "no usable signature", which looks like a notarisation failure and is not one.
+- **`ENABLE_HARDENED_RUNTIME = YES` is required.** Without it notarisation is rejected.
+  It is set in both configurations; do not remove it.
+
+Verify a build the way a recipient would experience it, not just with `codesign`: set a
+quarantine attribute (`xattr -w com.apple.quarantine "0083;...;Safari;$(uuidgen)"`),
+then `spctl -a -vvv -t open` the DMG and `-t execute` the app. Expect
+`source=Notarized Developer ID`. Note that a quarantined app launched from anywhere
+other than `/Applications` runs under **App Translocation** from a randomised read-only
+path, which starts noticeably slower. Give it ~10s before concluding it failed to open.
+
 ## Verifying a change actually works
 
 Building is not evidence. Launch it and confirm behaviour:

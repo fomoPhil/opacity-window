@@ -1,6 +1,6 @@
 # OpacityWindow handoff
 
-**Last updated: 2026-07-29**
+**Last updated: 2026-07-31**
 
 A macOS reference-image viewer whose whole window can be made semi-transparent, so
 you can trace or eyeball a reference over whatever app is behind it. SwiftUI, single
@@ -12,8 +12,9 @@ target, no dependencies.
 |---|---|
 | Repo | `github.com/fomoPhil/opacity-window` (**public**) |
 | Local | `~/Projects/opacity-window`, in sync with `origin/main` |
-| HEAD | "Show only one window" (single-instance `Window` scene) |
+| HEAD | "Sign and notarise for distribution" |
 | Working tree | clean |
+| Distribution | **Signed (Developer ID) and notarised**, team `AXW4GKUTKZ`. See CLAUDE.md. |
 | Build | **BUILD SUCCEEDED**, 0 errors, **0 warnings**, 0 deprecations (Debug and Release) |
 | Verified on | Xcode 26.3, Swift 6.2.4, macOS 26.3, Apple Silicon |
 | Language mode | **Swift 6** (`SWIFT_VERSION = 6.0`), full strict concurrency |
@@ -80,7 +81,26 @@ would fire into the void. `ContentView` drains it in `.onAppear` and also observ
 the publisher for opens while already running. **Do not "simplify" this into a
 notification**, because that reintroduces the cold-launch race.
 
-## What changed most recently (single window)
+## What changed most recently (signed and notarised)
+
+The app is now **signed with Developer ID and notarised by Apple**, so it can be handed
+to someone else and will open without a Gatekeeper warning. Full coordinates and the
+release recipe are in CLAUDE.md; the short version is Personal Team `AXW4GKUTKZ`, asc
+profile `Samplomatic`, `ExportOptions.plist` in the repo root.
+
+Only two build settings changed: `DEVELOPMENT_TEAM = AXW4GKUTKZ` and
+`ENABLE_HARDENED_RUNTIME = YES` (the latter is mandatory for notarisation, and its
+absence was the one real gap). The app keeps its sandbox entitlements.
+
+Both the `.app` and a `.dmg` were accepted by Apple on first submission and stapled.
+Verified the way a recipient sees it rather than by `codesign` alone: a quarantine
+attribute was applied, `spctl` reported `source=Notarized Developer ID` for both, and
+the quarantined app was mounted from the DMG and launched, loading an image correctly.
+
+**This is Developer ID distribution, not the Mac App Store.** Those are different
+signing paths and the App Store needs considerably more (see "Ideas never scoped").
+
+## Previously (single window)
 
 The scene is now `Window`, not `WindowGroup`, so **only one window can ever exist**.
 
@@ -106,7 +126,7 @@ strand the app with no window and no way to reopen one.
 reintroduces the stray window and makes the global ⌘L and the singleton panel genuinely
 wrong rather than merely redundant.
 
-## Previously (Swift 6 migration)
+## Earlier (Swift 6 migration)
 
 The project now builds in **Swift 6 language mode** with full strict concurrency, and
 all four Grand Central Dispatch hops are gone. What that took:
@@ -175,8 +195,6 @@ been sitting uncommitted in Info.plist, README.md and three asset catalog files.
   and it floats above the main one, so `set position of window 1` moves the little
   panel and not the window you meant. Select by size, not index.
 - **No tests at all.** "Working" currently means someone verified it by hand.
-- **Not distributable.** No `DEVELOPMENT_TEAM`; it signs "to Run Locally". Sharing it
-  with anyone else needs signing and notarising.
 
 ## Deliberately not done
 
@@ -184,8 +202,8 @@ These were considered and skipped as higher-risk than the value they'd deliver. 
 them up only with intent:
 
 1. **A test target.** Even a couple of unit tests around image loading and opacity
-   clamping would convert "verified by hand" into something that stays verified.
-2. **Signing and notarisation**, if this is ever shared.
+   clamping would convert "verified by hand" into something that stays verified. This
+   is now the only item left on this list.
 
 ## Ideas never scoped
 
