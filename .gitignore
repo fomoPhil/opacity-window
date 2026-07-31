@@ -13,3 +13,7 @@ DerivedData/
 # Swift Package Manager
 .swiftpm/
 
+# Local design explorations served on :50188. Throwaway by design: the icon's
+# real source of truth is tools/MakeIcon.swift, which regenerates it exactly.
+preview/
+

@@ -24,6 +24,21 @@ Treat a new warning as something to fix, not to accept.
 specifically because Finder hands over the file before `ContentView` exists on a cold
 launch. See handoff.md.
 
+**Never hand-edit the app icon PNGs.** `tools/MakeIcon.swift` is the source of
+truth. It draws the icon in CoreGraphics and writes all ten sizes plus
+`Contents.json`. Regenerate with:
+
+```bash
+swiftc -O tools/MakeIcon.swift -o /tmp/makeicon && \
+  /tmp/makeicon OpacityWindow/Assets.xcassets/AppIcon.appiconset
+```
+
+Each size is a *different drawing*, deliberately. Below 28 px the checkerboard and
+the white rim are dropped entirely, because a 1 px rim around an 11 px tile bleaches
+the amber out and three pixels of checker is noise rather than pattern. That
+per-size hinting is the whole reason this is generated rather than downsampled, so
+do not "simplify" it into one drawing scaled down.
+
 **Keep the scene a single-instance `Window`, not a `WindowGroup`.** This is a
 deliberate product decision, not an oversight. A WindowGroup spawns a second window
 when a file is opened while an as-yet-unused window is on screen, and it makes the
