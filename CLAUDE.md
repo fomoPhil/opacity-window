@@ -48,6 +48,36 @@ merely redundant.
 **Keep `LSHandlerRank = Alternate`** in Info.plist. This app must never become the
 system default image handler ahead of Preview.
 
+## Mac App Store
+
+Same **Personal Team** as Developer ID. Confirm before any account-scoped action.
+
+| | |
+|---|---|
+| Bundle ID | `com.fomoPhil.opacitywindow` (registered, ASC id `JVB98W77XA`) |
+| App cert | `3rd Party Mac Developer Application` (ASC id `DB5QLLYQG2`) |
+| Installer cert | `3rd Party Mac Developer Installer` (ASC id `47YY3GR7RA`) |
+| Profile | "OpacityWindow Mac App Store" (`ZB963SDTGT`, MAC_APP_STORE) |
+| Export config | `ExportOptions-AppStore.plist` |
+| Private keys | `~/.asc/signing/opacitywindow/` (mode 700, **never** in the repo) |
+
+Build an App Store package:
+
+```bash
+xcodebuild archive -project OpacityWindow.xcodeproj -scheme OpacityWindow \
+  -configuration Release -archivePath /tmp/ow.xcarchive -destination 'generic/platform=macOS'
+xcodebuild -exportArchive -archivePath /tmp/ow.xcarchive -exportPath /tmp/ow-mas \
+  -exportOptionsPlist ExportOptions-AppStore.plist
+```
+
+Two certificate families exist and they are not interchangeable. **Developer ID** signs
+builds distributed outside the store; **3rd Party Mac Developer** signs App Store
+builds. The legacy `IOS_DISTRIBUTION` cert on this machine is iPhone-only and cannot
+sign a Mac app at all.
+
+`asc apps` has **no create subcommand**: Apple's API cannot create an app record, so
+that step is the App Store Connect web UI (see the `asc-app-create-ui` skill).
+
 ## Distribution (Developer ID, outside the App Store)
 
 Signed and notarised under the **Personal Team**, not Meora Studios. Confirm this

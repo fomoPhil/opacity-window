@@ -12,13 +12,13 @@ target, no dependencies.
 |---|---|
 | Repo | `github.com/fomoPhil/opacity-window` (**public**) |
 | Local | `~/Projects/opacity-window`, in sync with `origin/main` |
-| HEAD | "Default to floating, and explain itself" |
+| HEAD | "Prepare for Mac App Store submission" |
 | Working tree | clean |
 | Distribution | **Signed (Developer ID) and notarised**, team `AXW4GKUTKZ`. See CLAUDE.md. |
 | Build | **BUILD SUCCEEDED**, 0 errors, **0 warnings**, 0 deprecations (Debug and Release) |
 | Verified on | Xcode 26.3, Swift 6.2.4, macOS 26.3, Apple Silicon |
 | Language mode | **Swift 6** (`SWIFT_VERSION = 6.0`), full strict concurrency |
-| Bundle id | `com.opacitywindow.app` |
+| Bundle id | `com.fomoPhil.opacitywindow` (**changed** from com.opacitywindow.app) |
 | Deployment target | macOS 14.0 |
 | Size | 935 lines of Swift across 6 files |
 
@@ -84,7 +84,42 @@ would fire into the void. `ContentView` drains it in `.onAppear` and also observ
 the publisher for opens while already running. **Do not "simplify" this into a
 notification**, because that reintroduces the cold-launch race.
 
-## What changed most recently (the pin, and instructions)
+## What changed most recently (App Store groundwork)
+
+The technical half of a Mac App Store submission is done and proven. Coordinates and
+the build recipe are in CLAUDE.md.
+
+**The bundle id changed to `com.fomoPhil.opacitywindow`.** It was `com.opacitywindow.app`,
+which was the odd one out against the other eight apps on the account. This was the
+last moment it was free to change: after a release the id is permanent, and a new one
+means a new listing with no reviews or ranking carried over.
+
+Info.plist gained `LSApplicationCategoryType` (graphics-design) and
+`ITSAppUsesNonExemptEncryption = false`, both required, and the copyright string now
+names a holder.
+
+Signing needed a whole second certificate family. **Developer ID and 3rd Party Mac
+Developer are not interchangeable**, and the `IOS_DISTRIBUTION` cert already on the
+machine is iPhone-only and cannot sign a Mac app. So a Mac App Distribution cert, a
+Mac Installer Distribution cert and a MAC_APP_STORE provisioning profile were created
+through `asc` and imported. Private keys live in `~/.asc/signing/opacitywindow/` at
+mode 700 and must never enter the repo.
+
+A real signed `OpacityWindow.pkg` builds and passes every check: the package is signed
+by the Installer cert, the app inside by the Application cert chaining to Apple Root,
+with hardened runtime, the embedded provisioning profile, and the sandbox entitlement
+intact through signing.
+
+**Not yet done, and mostly not automatable.** `asc apps` has no create subcommand
+because Apple's API cannot create an app record, so that step is the web UI. After it
+exists the build can be uploaded. Still needed from a human: screenshots, description,
+keywords, a hosted privacy policy URL, age rating and pricing.
+
+**The standing risk is Guideline 4.2, Minimum Functionality.** A single-purpose
+utility of this size is squarely in the range Apple rejects under it. That was flagged
+before the work started and the owner chose to proceed.
+
+## Previously (the pin, and instructions)
 
 Three changes, all triggered by a fair question: what is the pin actually *for*?
 
