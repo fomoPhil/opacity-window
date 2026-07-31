@@ -12,7 +12,7 @@ target, no dependencies.
 |---|---|
 | Repo | `github.com/fomoPhil/opacity-window` (**public**) |
 | Local | `~/Projects/opacity-window`, in sync with `origin/main` |
-| HEAD | "Give the app an icon" |
+| HEAD | "Default to floating, and explain itself" |
 | Working tree | clean |
 | Distribution | **Signed (Developer ID) and notarised**, team `AXW4GKUTKZ`. See CLAUDE.md. |
 | Build | **BUILD SUCCEEDED**, 0 errors, **0 warnings**, 0 deprecations (Debug and Release) |
@@ -20,7 +20,7 @@ target, no dependencies.
 | Language mode | **Swift 6** (`SWIFT_VERSION = 6.0`), full strict concurrency |
 | Bundle id | `com.opacitywindow.app` |
 | Deployment target | macOS 14.0 |
-| Size | 733 lines of Swift across 5 files |
+| Size | 935 lines of Swift across 6 files |
 
 Verified by hand on 2026-07-29 after the Swift 6 migration, all on a running build:
 cold launch with a file, warm `open -a` while running, opacity slider driven by
@@ -61,13 +61,16 @@ OpacityWindowApp.swift   @main. A single-instance `Window` scene, deliberately n
                          on launch and receives files from Finder. Holds
                          OpenImageRequest.
 ContentView.swift        Everything else: drop target, image state, ControlsBar,
-                         opacity/zoom/offset bindings, hover behaviour. 376 lines,
+                         opacity/zoom/offset bindings, hover behaviour. 411 lines,
                          the natural place to split if it grows further.
 ImageView.swift          Image display with zoom and pan gestures.
 WindowAccessor.swift     NSViewRepresentable bridge to NSWindow for alphaValue,
                          always-on-top level, and click-through when locked.
 UnlockButtonWindow.swift Separate floating window giving you a way back out of
                          locked (click-through) mode.
+HelpOverlay.swift        The "?" instructions panel. A sibling of ImageView in the
+                         ZStack so neither the opacity slider nor the toolbar's
+                         hover fade can dim it.
 ```
 
 **Communication is by NotificationCenter**, not shared observable state: menu
@@ -81,7 +84,41 @@ would fire into the void. `ContentView` drains it in `.onAppear` and also observ
 the publisher for opens while already running. **Do not "simplify" this into a
 notification**, because that reintroduces the cold-launch race.
 
-## What changed most recently (it has an icon now)
+## What changed most recently (the pin, and instructions)
+
+Three changes, all triggered by a fair question: what is the pin actually *for*?
+
+**It turns out to be the feature the whole app rests on**, which was measured rather
+than argued. With always-on-top off, activating another app pushed OpacityWindow
+behind it (front index 0 to index 1). With it on, the window stayed in front through
+activating two different apps in turn. Since the point of the app is to sit over the
+thing you are working in, a non-floating window fails the moment you click into that
+thing. So:
+
+1. **Always-on-top now defaults to on.** The old default was the state that does not
+   work for the primary use case, which meant you had to find a toolbar button before
+   the app did the thing you installed it for.
+2. **Locking now switches always-on-top on too**, via `.onChange(of: isLocked)` in
+   ContentView. Lock without float is self-defeating: the click passes through to the
+   app underneath, that app activates, and this window drops behind it, leaving a
+   reference you can neither see nor click. That state is no longer reachable.
+3. **A "?" button opens an instructions panel** (`HelpOverlay.swift`), because none of
+   this is discoverable, least of all click-through and the way back out of it.
+
+`HelpOverlay` is deliberately a **sibling of ImageView in the ZStack**, not a child of
+anything. The opacity slider dims the image and the toolbar fades itself out on hover
+exit; help that inherited either would be unreadable exactly when it is needed.
+Verified with the image dropped to 5%: the card renders at full strength. It also
+shrink-wraps its rows rather than filling the window, since a ScrollView takes all the
+height it is offered and left a slab of dead space under the last row.
+
+Dismissal works three ways, all checked on a running build by sampling pixels rather
+than trusting the accessibility tree: Escape, the "Got it" button, and clicking the
+scrim.
+
+**Note for future automation: the toolbar now has 8 buttons, not 7.** Help is button 8.
+
+## Previously (it has an icon now)
 
 The app shipped its first three builds with **no icon at all**. `AppIcon.appiconset`
 held slot definitions and zero images, so the bundle contained no `AppIcon.icns` and
@@ -107,7 +144,7 @@ bundle at 47 KB where there was previously no icon resource, and
 `NSWorkspace.icon(forFile:)` resolves the new artwork at 16, 32, 64 and 128 px, which
 is the same lookup Finder and the Dock use.
 
-## Previously (signed and notarised)
+## Earlier (signed and notarised)
 
 The app is now **signed with Developer ID and notarised by Apple**, so it can be handed
 to someone else and will open without a Gatekeeper warning. Full coordinates and the

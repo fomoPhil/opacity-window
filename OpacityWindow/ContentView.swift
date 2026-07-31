@@ -8,9 +8,13 @@ struct ContentView: View {
     @State private var offset: CGSize = .zero
     @State private var isControlsHovered: Bool = false
     @State private var isDraggingOver: Bool = false
-    @State private var isAlwaysOnTop: Bool = false
+    // On by default. This app exists to sit over the thing you are working in,
+    // and a non-floating window drops behind that app the moment you click into
+    // it, which is the one thing it must not do.
+    @State private var isAlwaysOnTop: Bool = true
     @State private var isLocked: Bool = false
     @State private var isWindowHovered: Bool = false
+    @State private var showHelp: Bool = false
     
     /// Golden yellow color for the window border
     private let goldenYellow = Color(red: 1.0, green: 0.84, blue: 0.0)
@@ -50,7 +54,8 @@ struct ContentView: View {
                     hasImage: loadedImage != nil,
                     isHovered: $isControlsHovered,
                     onOpenImage: openImagePicker,
-                    onRemoveImage: removeImage
+                    onRemoveImage: removeImage,
+                    onShowHelp: { showHelp = true }
                 )
                 .contentShape(Rectangle())
                 .allowsHitTesting(!isLocked)
@@ -86,12 +91,28 @@ struct ContentView: View {
                 .padding(2)
                 .allowsHitTesting(false)
                 .animation(.easeInOut(duration: 0.2), value: isWindowHovered)
+
+            // Sits last in the ZStack, and outside the controls VStack, so it is
+            // dimmed by neither the opacity slider nor the toolbar's hover fade.
+            if showHelp {
+                HelpOverlay {
+                    withAnimation(.easeInOut(duration: 0.18)) { showHelp = false }
+                }
+            }
         }
+        .animation(.easeInOut(duration: 0.18), value: showHelp)
         .frame(minWidth: 300, minHeight: 200)
         .onHover { hovering in
             isWindowHovered = hovering
         }
         .windowSettings(isAlwaysOnTop: isAlwaysOnTop, isLocked: isLocked)
+        .onChange(of: isLocked) { _, nowLocked in
+            // Locking without floating is self-defeating: the click passes through
+            // to the app underneath, that app activates, and this window drops
+            // behind it. You end up with a reference you can neither see nor
+            // click. So locking always turns floating on too.
+            if nowLocked { isAlwaysOnTop = true }
+        }
         .onDrop(of: [.image, .fileURL], isTargeted: $isDraggingOver) { providers in
             handleDrop(providers: providers)
         }
@@ -206,6 +227,7 @@ struct ControlsBar: View {
     @Binding var isHovered: Bool
     var onOpenImage: () -> Void
     var onRemoveImage: () -> Void
+    var onShowHelp: () -> Void
     
     @State private var lastOffset: CGSize = .zero
     
@@ -300,6 +322,19 @@ struct ControlsBar: View {
                 }
                 .buttonStyle(ControlButtonStyle(isActive: isLocked))
                 .help(isLocked ? "Unlock Window (⌘L)" : "Lock Window - Click Through (⌘L)")
+
+                Divider()
+                    .frame(height: 24)
+
+                // Last in the row: nothing here is discoverable on its own, least
+                // of all click-through and the way back out of it.
+                Button(action: onShowHelp) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 15, weight: .medium))
+                }
+                .buttonStyle(ControlButtonStyle())
+                .help("How to use it")
+                .accessibilityLabel("How to use it")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

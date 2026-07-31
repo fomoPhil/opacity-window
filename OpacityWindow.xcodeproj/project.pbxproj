@@ -13,6 +13,7 @@
 		A1000007233456780000001 /* WindowAccessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008233456780000001 /* WindowAccessor.swift */; };
 		A1000009233456780000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A100000A233456780000001 /* Assets.xcassets */; };
 		A100001D233456780000001 /* UnlockButtonWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C233456780000001 /* UnlockButtonWindow.swift */; };
+		A100001F233456780000001 /* HelpOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E233456780000001 /* HelpOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		A100000C233456780000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A100000D233456780000001 /* OpacityWindow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpacityWindow.entitlements; sourceTree = "<group>"; };
 		A100001C233456780000001 /* UnlockButtonWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockButtonWindow.swift; sourceTree = "<group>"; };
+		A100001E233456780000001 /* HelpOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +56,7 @@
 				A1000006233456780000001 /* ImageView.swift */,
 				A1000008233456780000001 /* WindowAccessor.swift */,
 				A100001C233456780000001 /* UnlockButtonWindow.swift */,
+				A100001E233456780000001 /* HelpOverlay.swift */,
 				A100000A233456780000001 /* Assets.xcassets */,
 				A100000C233456780000001 /* Info.plist */,
 				A100000D233456780000001 /* OpacityWindow.entitlements */,
@@ -143,6 +146,7 @@
 				A1000005233456780000001 /* ImageView.swift in Sources */,
 				A1000007233456780000001 /* WindowAccessor.swift in Sources */,
 				A100001D233456780000001 /* UnlockButtonWindow.swift in Sources */,
+				A100001F233456780000001 /* HelpOverlay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

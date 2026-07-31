@@ -123,3 +123,13 @@ Building is not evidence. Launch it and confirm behaviour:
 - Drag-and-drop cannot be driven by synthetic events. Exercise `handleDrop`'s two
   branches directly against a real `NSItemProvider` in a small standalone binary
   instead.
+- **The toolbar has 8 buttons**: 1 open, 2 remove, 3 zoom out, 4 zoom in, 5 reset,
+  6 always-on-top, 7 lock, 8 help. Read `help of button <n>` to check state rather
+  than tracking it yourself, since a toggle click flips whatever is already there.
+- **Accessibility cannot see inside the help overlay.** SwiftUI exposes the window as
+  a single opaque `group`, so `button "Got it" of window 1` finds nothing even while
+  the panel is plainly on screen. Detect it by sampling pixels at the window centre
+  (the card is near-black, roughly RGB 30/30/30) instead of trusting the AX tree.
+- **Read slider geometry via an intermediate variable.** `item 1 of (position of
+  slider 1 ...)` inline raises a coercion error; `set p to position of sl` then
+  `item 1 of p` works.
