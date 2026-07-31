@@ -5,7 +5,11 @@ struct OpacityWindowApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        WindowGroup {
+        // `Window`, not `WindowGroup`: this app shows one image at a time, and a
+        // WindowGroup would spawn a second window when a file was opened while an
+        // as-yet-unused window was on screen. A single-instance scene makes that
+        // impossible, and keeps ⌘L and the shared unlock panel unambiguous.
+        Window("Opacity Window", id: "main") {
             ContentView()
         }
         .windowStyle(.hiddenTitleBar)

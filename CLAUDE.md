@@ -24,6 +24,12 @@ Treat a new warning as something to fix, not to accept.
 specifically because Finder hands over the file before `ContentView` exists on a cold
 launch. See handoff.md.
 
+**Keep the scene a single-instance `Window`, not a `WindowGroup`.** This is a
+deliberate product decision, not an oversight. A WindowGroup spawns a second window
+when a file is opened while an as-yet-unused window is on screen, and it makes the
+global ⌘L notification and the singleton unlock panel genuinely wrong rather than
+merely redundant.
+
 **Keep `LSHandlerRank = Alternate`** in Info.plist. This app must never become the
 system default image handler ahead of Preview.
 
@@ -39,11 +45,14 @@ Building is not evidence. Launch it and confirm behaviour:
   at `slider 1 of scroll area 1 of group 1 of window 1`.
 - Image loading has three paths worth checking independently: drag-and-drop, ⌘O panel,
   and `open -a OpacityWindow <image>` (cold launch and already-running differ).
-- **The app opens several windows**, so `window 1` in AppleScript is a coin flip. Worse,
-  once the window is locked the **unlock panel becomes AX `window 1`**, so a naive
-  `set position of window 1` silently moves the little panel instead of the window and
-  the test proves nothing. Pick the window by size, not index. Reduce to a single
-  window first (⌘W the extras) whenever the check depends on which window responded.
+- **Purge saved state before counting windows.** Quit the app, wait for the process to
+  exit, then `rm -rf ~/Library/"Saved Application State"/com.opacitywindow.app.savedState`.
+  Otherwise macOS restores the previous run's windows and they look like a bug in this
+  one. `CGWindowListCopyWindowInfo` also lists two rows per window, so count distinct
+  bounds.
+- **Once locked, the unlock panel is AX `window 1`.** A naive `set position of window 1`
+  moves that little panel instead of the window you meant, and the test then proves
+  nothing. Select the window by size, not index.
 - Drag-and-drop cannot be driven by synthetic events. Exercise `handleDrop`'s two
   branches directly against a real `NSItemProvider` in a small standalone binary
   instead.

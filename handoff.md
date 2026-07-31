@@ -12,7 +12,7 @@ target, no dependencies.
 |---|---|
 | Repo | `github.com/fomoPhil/opacity-window` (**public**) |
 | Local | `~/Projects/opacity-window`, in sync with `origin/main` |
-| HEAD | `ade55d5` "Migrate to Swift 6 language mode and drop GCD" (plus this doc line) |
+| HEAD | "Show only one window" (single-instance `Window` scene) |
 | Working tree | clean |
 | Build | **BUILD SUCCEEDED**, 0 errors, **0 warnings**, 0 deprecations (Debug and Release) |
 | Verified on | Xcode 26.3, Swift 6.2.4, macOS 26.3, Apple Silicon |
@@ -33,6 +33,13 @@ Drag-and-drop is the one path that resists synthetic events. Both of its branche
 instead exercised directly against real `NSItemProvider`s, compiled under Swift 6, and
 both round-tripped correctly.
 
+Re-verified after the single-window change, from purged state each time: all four
+launch-and-open combinations now leave exactly one window, two images opened in
+sequence replace each other in that same window (same window id throughout, confirmed
+by screenshot), and ⌘O, the opacity slider, always-on-top, lock, unlock, move and
+resize while locked all still behave. ⌘W on the only window quits the app rather than
+stranding it.
+
 ## Build and run
 
 ```bash
@@ -47,9 +54,11 @@ There is one scheme, `OpacityWindow`, and no test target.
 ## Architecture
 
 ```
-OpacityWindowApp.swift   @main. Menu commands (⌘O, ⌘L) posted via NotificationCenter.
-                         AppDelegate makes the window transparent on launch and
-                         receives files from Finder. Holds OpenImageRequest.
+OpacityWindowApp.swift   @main. A single-instance `Window` scene, deliberately not a
+                         WindowGroup. Menu commands (⌘O, ⌘L) posted via
+                         NotificationCenter. AppDelegate makes the window transparent
+                         on launch and receives files from Finder. Holds
+                         OpenImageRequest.
 ContentView.swift        Everything else: drop target, image state, ControlsBar,
                          opacity/zoom/offset bindings, hover behaviour. 376 lines,
                          the natural place to split if it grows further.
@@ -71,7 +80,33 @@ would fire into the void. `ContentView` drains it in `.onAppear` and also observ
 the publisher for opens while already running. **Do not "simplify" this into a
 notification**, because that reintroduces the cold-launch race.
 
-## What changed most recently (Swift 6 migration)
+## What changed most recently (single window)
+
+The scene is now `Window`, not `WindowGroup`, so **only one window can ever exist**.
+
+The bug this fixes was narrower than it first looked. Opening a file while the app was
+running with a window that had *never loaded an image* built a second window beside it
+and left the empty one behind. Every other path was already fine: a plain launch, a
+launch by opening a file, and opening further images once one was already loaded all
+produced exactly one window. An earlier note in this file claimed a plain launch
+produced two windows; that was macOS restoring windows from previous test runs, not
+the app, and it has been corrected.
+
+`Window` is a single-instance scene, so the extra window is now impossible by
+construction rather than by defensive code. It also settles two things that were only
+ever ambiguous *because* several windows could exist: ⌘L posts a global notification
+that every `ContentView` receives, and `UnlockButtonWindowController` is a singleton
+holding one panel. With one window those are no longer a latent conflict.
+
+Closing the window still quits the app, via
+`applicationShouldTerminateAfterLastWindowClosed`, so a single-instance scene cannot
+strand the app with no window and no way to reopen one.
+
+**Keep it this way unless the product decision changes.** Going back to `WindowGroup`
+reintroduces the stray window and makes the global ⌘L and the singleton panel genuinely
+wrong rather than merely redundant.
+
+## Previously (Swift 6 migration)
 
 The project now builds in **Swift 6 language mode** with full strict concurrency, and
 all four Grand Central Dispatch hops are gone. What that took:
@@ -97,7 +132,7 @@ The two window observers deliberately keep `addObserver(forName:queue:.main)` pl
 guarantees main-thread delivery, and it stays synchronous, so the button does not lag
 a frame behind the window during a drag.
 
-## Previously (c6bd5ae)
+## Earlier (c6bd5ae)
 
 Images can now be opened from Finder: right-click → Open With, dropping a file on the
 Dock icon, and `open -a OpacityWindow image.png`. This needed both halves:
@@ -126,17 +161,19 @@ been sitting uncommitted in Info.plist, README.md and three asset catalog files.
   `slider 1 of scroll area <n> of group 1 of window <n>` (the toolbar is a scroll
   area). Resolve `<n>` at runtime rather than hardcoding 1; see the window-count quirk
   below for why the indices move around.
-- **The app opens more than one window, and this is not yet understood.** A plain
-  launch produces two windows; `open -a OpacityWindow <image>` while already running
-  adds another and loads the image into the *new* one, leaving the old window on
-  screen showing the previous image. Confirmed **pre-existing** (reproduced on
-  `aa4ea32` before the Swift 6 work, so the migration did not cause it). Two knock-on
-  effects worth knowing:
-  - ⌘L toggles lock on **every** window, because the lock is a global
-    `NotificationCenter` post that every `ContentView` receives, and they all then
-    compete over the single `UnlockButtonWindowController.shared` panel.
-  - `CGWindowListCopyWindowInfo` lists **two entries per NSWindow**, so count
-    distinct bounds, not raw rows, when checking how many windows exist.
+- **macOS state restoration will lie to you about window counts.** Any test that counts
+  windows *must* fully quit the app, wait for the process to actually exit, then delete
+  `~/Library/Saved Application State/com.opacitywindow.app.savedState` before
+  relaunching. Skipping that makes restored windows from the previous run look like a
+  bug in the current one, which is exactly the false alarm that produced the original
+  (wrong) "the app opens several windows on plain launch" report. Setting
+  `defaults write com.opacitywindow.app NSQuitAlwaysKeepsWindows -bool false` removes
+  the variable entirely.
+- **`CGWindowListCopyWindowInfo` lists two entries per NSWindow.** Count distinct
+  bounds, not raw rows, or every window looks doubled.
+- **When locked, the unlock panel is accessibility `window 1`.** It is a real window
+  and it floats above the main one, so `set position of window 1` moves the little
+  panel and not the window you meant. Select by size, not index.
 - **No tests at all.** "Working" currently means someone verified it by hand.
 - **Not distributable.** No `DEVELOPMENT_TEAM`; it signs "to Run Locally". Sharing it
   with anyone else needs signing and notarising.
@@ -149,10 +186,6 @@ them up only with intent:
 1. **A test target.** Even a couple of unit tests around image loading and opacity
    clamping would convert "verified by hand" into something that stays verified.
 2. **Signing and notarisation**, if this is ever shared.
-3. **The multi-window behaviour above.** Never scoped, and it is the most likely thing
-   to confuse a user: open a second image and the first window is still sitting there.
-   Deciding whether this app is single-window or genuinely multi-window is a *product*
-   question, not a bug fix, so it needs a decision before any code.
 
 ## Ideas never scoped
 
